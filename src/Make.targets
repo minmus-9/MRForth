@@ -1,0 +1,110 @@
+########################################################################
+### Make.targets
+###
+
+### get target-specific defs
+include plat/tgt-$(TGT)/Make.defs
+
+### mrforth.inc depends on mrfgen by default
+INC_DEPS=mrfgen$(EXE)
+
+### include file dirs
+INCLUDES=-I. -Ibase -Iplat/mach-$(MACH) -Iplat/os-$(OS)
+
+### final cc flags
+CFLAGS=$(C_FLAGS) $(INCLUDES)
+
+### forth core source files
+CORE_FSRCS=../forth/[0-8][0-9][0-9][0-9]-*.fth
+
+### mach-dep forth srcs
+MACH_FSRCS := $(shell /bin/ls plat/mach-$(MACH) | fgrep .fth)
+
+### os-dep forth srcs
+OS_FSRCS := $(shell /bin/ls plat/os-$(OS) | fgrep .fth)
+
+### tgt-dep forth srcs
+ENV_FSRCS := $(shell /bin/ls plat/tgt-$(TGT) | fgrep .fth)
+
+### forth core finalization source files
+FINI_FSRCS=../forth/9[0-9][0-9][0-9]-*.fth
+
+### all forth source files
+FSRCS=$(CORE_FSRCS) $(MACH_FSRCS) $(OS_FSRCS) $(ENV_FSRCS) $(APP_FSRCS) $(FINI_FSRCS)
+
+### c source files
+BASE_CSRCS=base/mrf*
+
+MACH_CSRCS=plat/mach-$(MACH)/mrf*.[ch]
+
+OS_CSRCS=plat/os-$(OS)/mrf*.[ch]
+
+CFG_CSRCS=mrfconfig.h
+
+GEN_CSRCS=mrfgen/mrf*.[ch] cli/*.[ch]
+
+VM_CSRCS=mrforth/mrf*.[ch]
+
+LIB_CSRCS=mrflib/mrf*.c
+
+### application sources
+GEN_SRCS=$(BASE_CSRCS) $(MACH_CSRCS) $(OS_CSRCS) $(CFG_CSRCS) $(APP_CSRCS) $(GEN_CSRCS)
+
+VM_SRCS=$(BASE_CSRCS) $(MACH_CSRCS) $(OS_CSRCS) $(CFG_CSRCS) $(APP_CSRCS) $(VM_CSRCS)
+
+LIB_SRCS=$(BASE_CSRCS) $(MACH_CSRCS) $(OS_CSRCS) $(CFG_CSRCS) $(APP_CSRCS) $(LIB_CSRCS)
+
+all:	mrforth$(EXE) mrforth.img libmrforth$(SHLIB) demo$(EXE)
+
+install:	all
+	cp mrfgen$(EXE) mrforth$(EXE) ..
+
+uninstall:	
+	rm -f ../mrfgen$(EXE) ../mrforth$(EXE)
+
+mrfgen$(EXE):	$(GEN_SRCS)
+	$(CC) $(CFLAGS) -Icli -Imrfgen -o mrfgen$(EXE) mrfgen/mrfgen.c
+
+mrforth.inc:	$(FSRCS) $(INC_DEPS)
+	./mrfgen$(EXE) $(FSRCS)
+
+libmrforth$(SHLIB):	$(LIB_SRCS) mrforth.inc
+	$(CCSHARED) $(CFLAGS) -Imrforth -o libmrforth$(SHLIB) mrflib/mrflib.c
+
+demo$(EXE):	libmrforth$(SHLIB) mrflib/demo.c
+	$(CC) $(CFLAGS) -o demo$(EXE) mrflib/demo.c -L. -lmrforth
+
+mrforth.img:	mrfgen$(EXE) $(FSRCS)
+	./mrfgen$(EXE) $(FSRCS) -- mrforth.img
+
+mrforth$(EXE):	$(VM_SRCS) mrforth.inc
+	$(CC) $(CFLAGS) -Icli -Imrforth -o mrforth$(EXE) mrforth/mrforth.c
+
+run:	mrforth$(EXE)
+	./mrforth$(EXE)
+
+### NB alter (smudge) in forth/1100-private.fth as directed to make this work!
+zz.raw:	mrforth$(EXE)
+	(echo words; echo bye) | ./mrforth$(EXE) > zz.raw
+
+zz.list:	zz.raw
+	tr ' ' '\012' < zz.raw | sed -e '1,/^mrforth>$$/d' -e '/^$$/,$$d' | sort > zz.list
+
+zz.cnt:	zz.list
+	perl -pe 'chomp;$$_=sprintf "%02d:%s\n", length(), $$_' < zz.list > zz.cnt
+
+colls:	zz.cnt
+	cut -c 1-$${CNT-6} < zz.cnt | sort | uniq -c | sed -e 's,^ *,,' | grep -v '^1 ' | sed -e '/^2 01::$$/d' -e '/^2 01:;$$/d' -e '/^2 08:name.*/d'
+
+tidy:
+	/bin/rm -f *~ */*~ */*/*~ */*/*/*~ *.stackdump core* zz.*
+
+clean:	tidy
+	/bin/rm -f mrforth.inc
+
+distclean:	clean uninstall
+	/bin/rm -f mrfgen$(EXE) mrforth$(EXE) mrforth.img
+	/bin/rm -f libmrforth$(SHLIB) mrforthtcl$(SHLIB) demo$(EXE)
+
+### EOF Make.targets
+

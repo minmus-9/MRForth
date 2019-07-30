@@ -1,0 +1,53 @@
+########################################################################
+### Make.defs for wish
+###
+
+### executable file suffix
+EXE=.exe
+
+### shlib file suffix
+SHLIB=.dll
+
+### build machine type -- see plat/mach-*
+MACH=ix86
+
+### build os type -- see plat/os-*
+OS=wish
+
+### cc opts
+COPTS=-mno-cygwin
+
+### c compiler
+CC=gcc $(COPTS)
+
+### shlib builder
+CCSHARED=gcc -shared $(COPTS)
+
+### tcl install dir
+TCLDIR=/cygdrive/c/Program\ Files/Tcl
+
+### c compiler flags
+C_FLAGS=-Wall -O -fomit-frame-pointer -fstrength-reduce -funroll-loops -fexpensive-optimizations -finline-functions -I$(TCLDIR)/include
+
+### linker flags
+L_FLAGS=-L$(TCLDIR)/bin -ltcl83
+
+### cygwin x11 wish defs:
+#COPTS=
+#TCLDIR=/usr
+#L_FLAGS=-ltcl84
+
+### extra lib srcs
+X_L_SRCS=plat/os-$(OS)/mrftcl.c
+
+### tcl lib c srcs
+TCL_LIB_SRCS=$(BASE_CSRCS) $(MACH_CSRCS) $(OS_CSRCS) $(CFG_CSRCS) $(APP_CSRCS)
+
+xx:	
+	@echo $(TCL_LIB_SRCS)
+
+mrforthtcl$(SHLIB):	$(TCL_LIB_SRCS)
+	$(CCSHARED) $(CFLAGS) -Imrforth -o mrforthtcl$(SHLIB) plat/os-$(OS)/mrftcl.c $(L_FLAGS) 
+
+### EOF Make.defs
+

@@ -1,0 +1,30 @@
+########################################################################
+### Make.defs for cygwin
+###
+
+### executable file suffix
+EXE=.exe
+
+### shlib file suffix
+SHLIB=.so
+
+### build machine type -- see plat/mach-*
+MACH=ix86
+
+### build os type -- see plat/os-*
+OS=ansi
+
+### cc opts
+COPTS=-fPIC
+
+### c compiler
+CC=gcc $(COPTS)
+
+### shlib builder
+CCSHARED=gcc -shared $(COPTS)
+
+### c compiler flags
+C_FLAGS=-Wall -O -fomit-frame-pointer -fstrength-reduce -funroll-loops -fexpensive-optimizations -finline-functions
+
+### EOF Make.defs
+
